@@ -1,0 +1,270 @@
+openapi: 3.0.0
+info:
+  title: DKUT Asset Management System API
+  description: API for managing university assets
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: Default API server
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        asset_id:
+          type: string
+          description: Formatted asset identifier
+        name:
+          type: string
+        model:
+          type: string
+        serial_number:
+          type: string
+        initial_value:
+          type: number
+          format: float
+        current_value:
+          type: number
+          format: float
+        date_received:
+          type: string
+          format: date
+        depreciation_years:
+          type: integer
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [available, assigned, maintenance, disposed]
+      required:
+        - name
+        - initial_value
+    
+    Maintenance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        asset_id:
+          type: string
+          format: uuid
+        maintenance_type:
+          type: string
+        description:
+          type: string
+        scheduled_date:
+          type: string
+          format: date
+        completed_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [scheduled, in-progress, completed, cancelled]
+        performed_by:
+          type: string
+        notes:
+          type: string
+        cost:
+          type: number
+          format: float
+      required:
+        - asset_id
+        - maintenance_type
+        - description
+        - scheduled_date
+
+paths:
+  /assets:
+    get:
+      summary: Get all assets
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by asset status
+        - in: query
+          name: department
+          schema:
+            type: string
+          description: Filter by department ID
+      responses:
+        '200':
+          description: List of assets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Asset'
+    post:
+      summary: Create a new asset
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Asset'
+      responses:
+        '201':
+          description: Asset created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+  
+  /assets/{id}:
+    get:
+      summary: Get asset by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Asset ID
+      responses:
+        '200':
+          description: Asset details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '404':
+          description: Asset not found
+    
+    put:
+      summary: Update asset
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Asset ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Asset'
+      responses:
+        '200':
+          description: Asset updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '404':
+          description: Asset not found
+  
+  /maintenance:
+    get:
+      summary: Get all maintenance records
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by maintenance status
+        - in: query
+          name: asset_id
+          schema:
+            type: string
+          description: Filter by asset ID
+      responses:
+        '200':
+          description: List of maintenance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Maintenance'
+    
+    post:
+      summary: Schedule maintenance
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Maintenance'
+      responses:
+        '201':
+          description: Maintenance scheduled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Maintenance'
+  
+  /maintenance/{id}:
+    get:
+      summary: Get maintenance record by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Maintenance ID
+      responses:
+        '200':
+          description: Maintenance record details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Maintenance'
+        '404':
+          description: Maintenance record not found
+    
+    put:
+      summary: Update maintenance record
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Maintenance ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Maintenance'
+      responses:
+        '200':
+          description: Maintenance record updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Maintenance'
+        '404':
+          description: Maintenance record not found

@@ -1,0 +1,163 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+}
+
+model Department {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  code      String   @unique
+  location  String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  requests    Request[]
+  assignments Assignment[]
+
+  @@map("departments")
+}
+
+model Asset {
+  id                  String   @id @default(uuid()) @db.Uuid
+  assetId             String   @unique @map("asset_id")
+  name                String
+  description         String?
+  model               String?
+  serialNumber        String?  @map("serial_number")
+  manufacturer        String?
+  category            String
+  purchaseDate        DateTime? @map("purchase_date") @db.Date
+  purchaseValue       Decimal? @map("purchase_value") @db.Decimal(10, 2)
+  currentValue        Decimal? @map("current_value") @db.Decimal(10, 2)
+  expectedLifetimeYears Int?    @map("expected_lifetime_years")
+  status              String   @default("available")
+  notes               String?
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  qrTag        QrTag?
+  maintenances Maintenance[]
+  assignments  Assignment[]
+  requestItems RequestItem[]
+
+  @@map("assets")
+}
+
+model QrTag {
+  id            String    @id @default(uuid()) @db.Uuid
+  assetId       String    @unique @map("asset_id") @db.Uuid
+  qrData        String    @map("qr_data")
+  generatedAt   DateTime  @default(now()) @map("generated_at") @db.Timestamptz
+  lastScannedAt DateTime? @map("last_scanned_at") @db.Timestamptz
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("qr_tags")
+}
+
+model Request {
+  id           String   @id @default(uuid()) @db.Uuid
+  departmentId String   @map("department_id") @db.Uuid
+  requester    String
+  purpose      String
+  status       String   @default("pending")
+  requestedAt  DateTime @default(now()) @map("requested_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  department   Department    @relation(fields: [departmentId], references: [id])
+  requestItems RequestItem[]
+  approvals    Approval[]
+
+  @@map("requests")
+}
+
+model RequestItem {
+  id            String  @id @default(uuid()) @db.Uuid
+  requestId     String  @map("request_id") @db.Uuid
+  assetId       String? @map("asset_id") @db.Uuid
+  assetCategory String? @map("asset_category")
+  quantity      Int     @default(1)
+  notes         String?
+
+  request Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  asset   Asset?  @relation(fields: [assetId], references: [id])
+
+  @@map("request_items")
+}
+
+model Approval {
+  id         String   @id @default(uuid()) @db.Uuid
+  requestId  String   @map("request_id") @db.Uuid
+  approver   String
+  status     String
+  comments   String?
+  approvedAt DateTime @default(now()) @map("approved_at") @db.Timestamptz
+
+  request Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("approvals")
+}
+
+model Assignment {
+  id                    String    @id @default(uuid()) @db.Uuid
+  assetId               String    @map("asset_id") @db.Uuid
+  departmentId          String    @map("department_id") @db.Uuid
+  assignedTo            String    @map("assigned_to")
+  assignedBy            String    @map("assigned_by")
+  startDate             DateTime  @map("start_date") @db.Date
+  endDate               DateTime? @map("end_date") @db.Date
+  status                String    @default("active")
+  acknowledgementStatus String    @default("pending") @map("acknowledgement_status")
+  acknowledgedAt        DateTime? @map("acknowledged_at") @db.Timestamptz
+  notes                 String?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  asset      Asset      @relation(fields: [assetId], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
+
+  @@map("assignments")
+}
+
+model Maintenance {
+  id              String    @id @default(uuid()) @db.Uuid
+  assetId         String    @map("asset_id") @db.Uuid
+  maintenanceType String    @map("maintenance_type")
+  description     String
+  scheduledDate   DateTime? @map("scheduled_date") @db.Date
+  completedDate   DateTime? @map("completed_date") @db.Date
+  performedBy     String?   @map("performed_by")
+  cost            Decimal?  @db.Decimal(10, 2)
+  status          String    @default("scheduled")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  @@map("maintenance")
+}
+
+model AuditTrail {
+  id          String   @id @default(uuid()) @db.Uuid
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id") @db.Uuid
+  action      String
+  performedBy String   @map("performed_by")
+  oldValues   Json?    @map("old_values")
+  newValues   Json?    @map("new_values")
+  timestamp   DateTime @default(now()) @db.Timestamptz
+
+  @@map("audit_trail")
+}
